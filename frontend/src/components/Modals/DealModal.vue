@@ -109,25 +109,32 @@ const chooseExistingContact = ref(false)
 const chooseExistingOrganization = ref(false)
 const fieldLayoutRef = ref(null)
 
+// Function to update section visibility based on switch states
+function updateSectionVisibility() {
+  if (!tabs.data) return
+
+  const organization = chooseExistingOrganization.value
+  const contact = chooseExistingContact.value
+
+  tabs.data.forEach((tab) => {
+    tab.sections.forEach((section) => {
+      if (section.name === 'organization_section') {
+        section.hidden = !organization
+      } else if (section.name === 'organization_details_section') {
+        section.hidden = organization
+      } else if (section.name === 'contact_section') {
+        section.hidden = !contact
+      } else if (section.name === 'contact_details_section') {
+        section.hidden = contact
+      }
+    })
+  })
+}
+
+// Watch for manual switch changes
 watch(
   [chooseExistingOrganization, chooseExistingContact],
-  ([organization, contact]) => {
-    if (!tabs.data) return
-
-    tabs.data.forEach((tab) => {
-      tab.sections.forEach((section) => {
-        if (section.name === 'organization_section') {
-          section.hidden = !organization
-        } else if (section.name === 'organization_details_section') {
-          section.hidden = organization
-        } else if (section.name === 'contact_section') {
-          section.hidden = !contact
-        } else if (section.name === 'contact_details_section') {
-          section.hidden = contact
-        }
-      })
-    })
-  },
+  updateSectionVisibility,
 )
 
 const tabs = createResource({
@@ -137,7 +144,7 @@ const tabs = createResource({
   auto: true,
   transform: (_tabs) => {
     hasOrganizationSections.value = false
-    return _tabs.forEach((tab) => {
+    _tabs.forEach((tab) => {
       tab.sections.forEach((section) => {
         section.columns.forEach((column) => {
           if (
@@ -167,6 +174,11 @@ const tabs = createResource({
         })
       })
     })
+
+    // Update section visibility after tabs are loaded
+    nextTick(() => updateSectionVisibility())
+
+    return _tabs
   },
 })
 
@@ -271,6 +283,10 @@ watch(show, async (isShown) => {
     chooseExistingContact.value = Boolean(
       settings.value?.default_choose_existing_contact,
     )
+
+    // Manually trigger section visibility update
+    // (needed when default values don't trigger the watcher)
+    nextTick(() => updateSectionVisibility())
   }
 })
 
